@@ -15,7 +15,7 @@ import uuid
 import webbrowser
 from db import get_db_path, init_db, insert_upload
 
-APP_VERSION = "2"
+APP_VERSION = "3"
 PORT = 5000
 
 
@@ -163,19 +163,17 @@ def update_app():
     if not security_ok():
         return jsonify({"status": "unauthorized"}), 401
     try:
-        # Auto-commit any local changes before pulling
-        subprocess.run(["git", "add", "."], cwd=os.path.dirname(__file__), capture_output=True, text=True, timeout=10)
-        commit_result = subprocess.run([
-            "git", "commit", "-m", "Auto-commit before update"
-        ], cwd=os.path.dirname(__file__), capture_output=True, text=True, timeout=10)
-        # Ignore 'nothing to commit' error
+        # Always use the directory where the running Server.py is located
+        server_dir = os.path.dirname(os.path.abspath(__file__))
+        subprocess.run(["git", "stash", "--include-untracked"], cwd=server_dir, capture_output=True, text=True, timeout=15)
         pull_result = subprocess.run(
             ["git", "pull"],
-            cwd=os.path.dirname(__file__),
+            cwd=server_dir,
             capture_output=True,
             text=True,
             timeout=30,
         )
+        subprocess.run(["git", "stash", "pop"], cwd=server_dir, capture_output=True, text=True, timeout=15)
         if pull_result.returncode == 0:
             return jsonify({"status": "ok", "output": pull_result.stdout.strip()})
         return jsonify({"status": "error", "error": pull_result.stderr.strip()})
