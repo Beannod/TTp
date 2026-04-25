@@ -446,7 +446,22 @@ summary::-webkit-details-marker { display: none; }
      <select id="folder-select" aria-label="Folder"></select>
      <button class="btn-ghost" onclick="useSelectedFolder()">Use</button>
     <a href="/gallery" class="btn" style="margin-left:4px;">Gallery</a>
-     <button class="btn-warn" onclick="updateApp()">Update</button>
+    <button class="btn-warn" onclick="updateApp()">Update</button>
+    <button class="btn-warn" onclick="restartServer()">Restart Server</button>
+<script>
+function restartServer() {
+    if (!confirm('Are you sure you want to restart the server?')) return;
+    document.getElementById('update-status').innerText = 'Restarting server...';
+    fetch('/restart-server', {method: 'POST'})
+        .then(r => r.json())
+        .then(res => {
+            document.getElementById('update-status').innerText = res.status === 'ok' ? 'Server restarting...' : 'Restart failed: ' + (res.error || '');
+        })
+        .catch(() => {
+            document.getElementById('update-status').innerText = 'Restart failed (network error)';
+        });
+}
+</script>
   </div>
 </div>
 <div class="card">

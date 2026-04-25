@@ -1,3 +1,18 @@
+# Restart server endpoint
+@app.post("/restart-server")
+def restart_server():
+    if not security_ok():
+        return jsonify({"status": "unauthorized"}), 401
+    try:
+        # On Windows, use a subprocess to restart the script
+        python = os.sys.executable
+        script = os.path.abspath(__file__)
+        # Start a new process and exit the current one
+        subprocess.Popen([python, script])
+        os._exit(0)
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)})
 import base64
 import datetime
 import io
