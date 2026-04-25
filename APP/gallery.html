@@ -159,6 +159,8 @@ input[type="text"]{width:100%;padding:10px 12px;border-radius:12px;border:1px so
         <button id="tab-explorer" class="active" onclick="setMode('explorer')">Explorer</button>
         <button id="tab-recent" onclick="setMode('recent')">Recent</button>
       </div>
+      <select id="gallery-folder-select" style="margin-left:10px;"></select>
+      <button onclick="useGalleryFolder()">Use</button>
       <a class="btn" href="/">Uploader</a>
     </div>
   </div>
@@ -307,6 +309,41 @@ input[type="text"]{width:100%;padding:10px 12px;border-radius:12px;border:1px so
 </div>
 
 <script>
+function refreshGalleryFolders() {
+  fetch('/folders')
+    .then(r => r.json())
+    .then(res => {
+      const sel = document.getElementById('gallery-folder-select');
+      if (!sel) return;
+      sel.innerHTML = '';
+      if (res.status !== 'ok') {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'All';
+        sel.appendChild(opt);
+        return;
+      }
+      const folders = res.folders || [];
+      folders.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+    })
+    .catch(() => {});
+}
+
+function useGalleryFolder() {
+  const sel = document.getElementById('gallery-folder-select');
+  const folder = sel && sel.value;
+  if (!folder) return;
+  // You may need to call your gallery refresh logic here, e.g.:
+  setExplorerFolder(folder);
+}
+
+// Call on page load
+window.addEventListener('DOMContentLoaded', refreshGalleryFolders);
 /* ─────────────────────────────────────────
    STATE
 ───────────────────────────────────────── */
