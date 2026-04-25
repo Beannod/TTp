@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#6366f1">
+<title>Gallery</title>
+<style>
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: linear-gradient(135deg, #a5b4fc 0%, #fbc2eb 100%);
+  min-height: 100vh;
+  margin: 0;
+  color: #0f172a;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12px 10px 18px 10px;
+}
+.wrap { width: 100%; max-width: 1020px; }
+.appbar {
+  position: sticky;
+  top: 0;
+  z-index: 1500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 10px;
+  margin: 0 0 10px 0;
+  background: rgba(255,255,255,0.78);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid rgba(199,210,254,0.7);
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(80,80,160,0.10);
+}
+.brand { text-align: left; line-height: 1.1; }
+.brand .title { font-size: 1.18rem; font-weight: 900; letter-spacing: -0.4px; }
+.brand .sub { font-size: 0.9rem; color: #64748b; font-weight: 600; margin-top: 2px; }
+.actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
+button, a.btn {
+  appearance: none;
+  text-decoration: none;
+  background: rgba(99,102,241,0.10);
+  color: #3730a3;
+  border: none;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+button:hover, a.btn:hover { background: rgba(99,102,241,0.16); }
+.seg {
+  display: inline-flex;
+  border: 1px solid rgba(199,210,254,0.9);
+  background: rgba(248,250,252,0.9);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.seg button {
+  background: transparent;
+  color: #334155;
+  padding: 10px 12px;
+  border-radius: 0;
+  font-weight: 900;
+}
+.seg button.active {
+  background: rgba(99,102,241,0.14);
+  color: #1e1b4b;
+}
+.card {
+  background: rgba(255,255,255,0.97);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 4px 16px rgba(80,80,160,0.10), 0 1.5px 8px rgba(0,0,0,0.07);
+}
+.grid2 { display: grid; grid-template-columns: 320px 1fr; gap: 12px; }
+.panel {
+  border: 1px solid rgba(199,210,254,0.8);
+  border-radius: 12px;
+  background: rgba(248,250,252,0.9);
+  padding: 10px;
+}
+.panel h3 { margin: 0 0 8px 0; font-size: 0.96rem; letter-spacing: -0.2px; }
+.muted { color: #64748b; font-size: 0.9rem; }
+.folder-list { margin-top: 8px; max-height: 58vh; overflow: auto; padding-right: 4px; }
+.folder-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.folder-item:hover { background: rgba(99,102,241,0.10); }
+.folder-item.active { background: rgba(99,102,241,0.14); }
+.folder-left { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.pill {
+  font-size: 0.78rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(16,185,129,0.14);
+  color: #065f46;
+  font-weight: 900;
+}
+input[type="checkbox"] { width: 18px; height: 18px; }
+.toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.search {
+  flex: 1 1 auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+input[type="text"] {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #c7d2fe;
+  background: #f8fafc;
+  font-size: 0.98rem;
+}
+.explorer {
+  border: 1px solid rgba(199,210,254,0.8);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.thead, .trow {
+  display: grid;
+  grid-template-columns: 38px 1fr 110px 170px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 10px;
+}
+.thead {
+  background: rgba(224,231,255,0.7);
+  color: #334155;
+  font-weight: 900;
+  font-size: 0.88rem;
+}
+.trow {
+  background: rgba(255,255,255,0.96);
+  border-top: 1px solid rgba(226,232,240,0.9);
+  font-size: 0.94rem;
+}
+.trow:hover { background: rgba(248,250,252,0.95); }
+.name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kind { color: #64748b; font-weight: 800; font-size: 0.88rem; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88rem; color: #475569; }
+.thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+.thumb {
+  border: 1px solid rgba(199,210,254,0.8);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.92);
+  cursor: pointer;
+}
+.thumb img {
+  width: 100%;
+  aspect-ratio: 1/1;
+  object-fit: cover;
+  display: block;
+}
+.thumb .cap {
+  padding: 8px 10px;
+  font-size: 0.88rem;
+  color: #334155;
+  word-break: break-word;
+}
+.empty {
+  color: #94a3b8;
+  text-align: center;
+  padding: 22px 0;
+}
+.lightbox {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.78);
+  z-index: 2000;
+  padding: 18px;
+}
+.lightbox.show { display: flex; }
+.lightbox img {
+  max-width: min(94vw, 980px);
+  max-height: 84vh;
+  border-radius: 12px;
+  box-shadow: 0 18px 60px rgba(0,0,0,0.35);
+  background: #fff;
+}
+.lightbox .cap {
+  margin-top: 10px;
+  max-width: min(94vw, 980px);
+  color: #e2e8f0;
+  font-size: 0.95rem;
+  text-align: left;
+  word-break: break-word;
+}
+.lightbox a.open {
+  display: inline-block;
+  margin-top: 10px;
+  text-decoration: none;
+  background: rgba(99,102,241,0.16);
+  color: #eef2ff;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 900;
+}
+.pdf-nav {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 2100;
+}
+.pdf-nav button {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.92);
+  color: #0f172a;
+  border: 1px solid rgba(226,232,240,0.9);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.22);
+  font-weight: 900;
+  cursor: pointer;
+}
+.pdf-nav button:hover { background: rgba(255,255,255,0.98); }
+.lightbox a.open:hover { background: rgba(99,102,241,0.24); }
+@media (max-width: 860px) {
+  .wrap { max-width: 560px; }
+  .grid2 { grid-template-columns: 1fr; }
+  .folder-list { max-height: 240px; }
+  .thead, .trow { grid-template-columns: 38px 1fr 90px 140px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="appbar">
+    <div class="brand">
+      <div class="title">Gallery</div>
+      <div class="sub">Explorer + Recent uploads</div>
+    </div>
+    <div class="actions">
+      <div class="seg" role="tablist" aria-label="View mode">
+        <button id="tab-explorer" class="active" onclick="setMode('explorer')" role="tab">Explorer</button>
+        <button id="tab-recent" onclick="setMode('recent')" role="tab">Recent</button>
+      </div>
+      <a class="btn" href="/">Uploader</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div id="view-explorer">
+      <div class="grid2">
+        <div class="panel">
+          <h3>Folders</h3>
+          <div class="muted">Select one (or multiple) folder(s) to view like File Explorer.</div>
+          <div class="folder-list" id="folder-list"></div>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button onclick="selectAll()">Select all</button>
+            <button onclick="clearAll()">Clear</button>
+            <button onclick="refreshExplorer()">Refresh</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="toolbar">
+            <div class="search">
+              <input id="q" type="text" placeholder="Search filename...">
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button onclick="toggleLayout()" id="layout-btn">Thumbnails</button>
+            </div>
+          </div>
+          <div class="muted" id="explorer-head">No folder selected.</div>
+          <div id="explorer-body" style="margin-top:10px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-recent" style="display:none;">
+      <div class="panel">
+        <div class="toolbar">
+          <div class="muted" id="recent-head">Loading...</div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="loadRecent()">Refresh</button>
+          </div>
+        </div>
+        <div id="recent-body"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <div>
+    <img id="lightbox-img" alt="Preview">
+    <div id="pdf-view" style="display:none;">
+      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button onclick="pdfPrevPage()" style="background:rgba(255,255,255,0.92);color:#0f172a;border:1px solid rgba(226,232,240,0.9);box-shadow:0 10px 26px rgba(0,0,0,0.22);">Prev</button>
+          <button onclick="pdfNextPage()" style="background:rgba(255,255,255,0.92);color:#0f172a;border:1px solid rgba(226,232,240,0.9);box-shadow:0 10px 26px rgba(0,0,0,0.22);">Next</button>
+          <div style="color:#e2e8f0;font-weight:900;" id="pdf-page-label">Page</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button onclick="pdfClearHighlights()" style="background:rgba(255,255,255,0.92);color:#0f172a;border:1px solid rgba(226,232,240,0.9);box-shadow:0 10px 26px rgba(0,0,0,0.22);">Clear</button>
+          <button onclick="pdfSaveHighlights()" style="background:rgba(16,185,129,0.92);color:#064e3b;border:1px solid rgba(226,232,240,0.9);box-shadow:0 10px 26px rgba(0,0,0,0.22);">Save</button>
+        </div>
+      </div>
+      <div id="pdf-stage" style="position:relative;width:min(94vw,980px);height:84vh;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 18px 60px rgba(0,0,0,0.35);">
+        <img id="pdf-page-img" alt="PDF Page" style="width:100%;height:100%;object-fit:contain;display:block;">
+        <canvas id="pdf-overlay" style="position:absolute;inset:0;"></canvas>
+      </div>
+    </div>
+    <a id="lightbox-open" class="open" href="#" target="_blank" rel="noopener" style="display:none;">Open</a>
+    <div class="cap" id="lightbox-cap"></div>
+  </div>
+</div>
+<div class="pdf-nav" id="pdf-nav">
+  <button onclick="pdfScroll(-1)" title="Scroll up">˄</button>
+  <button onclick="pdfScroll(1)" title="Scroll down">˅</button>
+</div>
+
+<script>
+let mode = 'explorer';
+let layout = 'thumbs'; // thumbs | list
+let allFolders = [];
+let selectedFolders = new Set();
+let pdfState = { folder: null, file: null, pages: 0, page: 0, zoom: 1.6, highlights: [] };
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('view-explorer').style.display = (m === 'explorer') ? '' : 'none';
+  document.getElementById('view-recent').style.display = (m === 'recent') ? '' : 'none';
+  document.getElementById('tab-explorer').classList.toggle('active', m === 'explorer');
+  document.getElementById('tab-recent').classList.toggle('active', m === 'recent');
+  if (m === 'recent') loadRecent();
+}
+
+function formatBytes(bytes) {
+  if (bytes == null) return '-';
+  if (bytes < 1024) return bytes + ' B';
+  const kb = bytes / 1024;
+  if (kb < 1024) return kb.toFixed(1) + ' KB';
+  const mb = kb / 1024;
+  if (mb < 1024) return mb.toFixed(1) + ' MB';
+  const gb = mb / 1024;
+  return gb.toFixed(2) + ' GB';
+}
+
+function formatTime(ts) {
+  if (!ts) return '-';
+  try {
+    const d = new Date(ts * 1000);
+    return d.toISOString().replace('T',' ').slice(0,19);
+  } catch (e) {
+    return '-';
+  }
+}
+
+function isImage(name) {
+  return !!name && name.match(/\.(jpg|jpeg|png|gif|webp|bmp|tif|tiff)$/i);
+}
+function isPdf(name) {
+  return !!name && name.match(/\.pdf$/i);
+}
+
+function openLightbox(src, caption) {
+  const lb = document.getElementById('lightbox');
+  const im = document.getElementById('lightbox-img');
+  const pdfView = document.getElementById('pdf-view');
+  const open = document.getElementById('lightbox-open');
+  const cap = document.getElementById('lightbox-cap');
+  if (!lb || !im || !pdfView || !cap || !open) return;
+  im.style.display = '';
+  pdfView.style.display = 'none';
+  im.src = src;
+  open.style.display = '';
+  open.href = src;
+  const nav = document.getElementById('pdf-nav');
+  if (nav) nav.style.display = 'none';
+  cap.textContent = caption || '';
+  lb.classList.add('show');
+}
+function openPdf(src, caption) {
+  const lb = document.getElementById('lightbox');
+  const im = document.getElementById('lightbox-img');
+  const pdfView = document.getElementById('pdf-view');
+  const open = document.getElementById('lightbox-open');
+  const cap = document.getElementById('lightbox-cap');
+  if (!lb || !im || !pdfView || !cap || !open) return;
+  im.style.display = 'none';
+  im.src = '';
+  pdfView.style.display = '';
+  open.style.display = '';
+  open.href = src;
+  const nav = document.getElementById('pdf-nav');
+  if (nav) nav.style.display = 'flex';
+  cap.textContent = caption || '';
+  lb.classList.add('show');
+
+  // Parse /uploads/<folder>/<file> from src so we can call our PDF APIs.
+  const m = String(src || '').match(/^\/uploads\/([^\/]+)\/(.+)$/);
+  if (m) {
+    pdfState.folder = decodeURIComponent(m[1]);
+    pdfState.file = decodeURIComponent(m[2]);
+    pdfLoadInfoAndPage();
+  }
+}
+function pdfScroll(dir) {
+  const stage = document.getElementById('pdf-stage');
+  if (!stage) return;
+  const amt = Math.round(window.innerHeight * 0.72) * dir;
+  stage.scrollBy(0, amt);
+}
+function closeLightbox() {
+  const lb = document.getElementById('lightbox');
+  if (!lb) return;
+  lb.classList.remove('show');
+  const im = document.getElementById('lightbox-img');
+  const open = document.getElementById('lightbox-open');
+  if (im) im.src = '';
+  if (open) open.style.display = 'none';
+  const nav = document.getElementById('pdf-nav');
+  if (nav) nav.style.display = 'none';
+  const pdfView = document.getElementById('pdf-view');
+  if (pdfView) pdfView.style.display = 'none';
+}
+
+function pdfLoadInfoAndPage() {
+  if (!pdfState.folder || !pdfState.file) return;
+  fetch(`/pdf-info?folder=${encodeURIComponent(pdfState.folder)}&file=${encodeURIComponent(pdfState.file)}`)
+    .then(r => r.json())
+    .then(res => {
+      if (res.status !== 'ok') throw new Error(res.error || 'Failed');
+      pdfState.pages = res.pages || 0;
+      pdfState.page = Math.max(0, Math.min(pdfState.page, Math.max(0, pdfState.pages - 1)));
+      pdfRenderPage();
+    })
+    .catch(() => {
+      const lbl = document.getElementById('pdf-page-label');
+      if (lbl) lbl.textContent = 'PDF failed to load';
+    });
+}
+
+function pdfRenderPage() {
+  const img = document.getElementById('pdf-page-img');
+  const lbl = document.getElementById('pdf-page-label');
+  if (!img || !lbl) return;
+  lbl.textContent = pdfState.pages ? `Page ${pdfState.page + 1} / ${pdfState.pages}` : `Page ${pdfState.page + 1}`;
+  const url = `/pdf-page?folder=${encodeURIComponent(pdfState.folder)}&file=${encodeURIComponent(pdfState.file)}&page=${pdfState.page}&zoom=${pdfState.zoom}`;
+  img.onload = () => { pdfResizeOverlay(); pdfDrawHighlights(); };
+  img.src = url;
+}
+
+function pdfPrevPage() {
+  if (pdfState.page > 0) { pdfState.page -= 1; pdfRenderPage(); }
+}
+function pdfNextPage() {
+  if (pdfState.pages && pdfState.page < pdfState.pages - 1) { pdfState.page += 1; pdfRenderPage(); }
+}
+
+function pdfResizeOverlay() {
+  const canvas = document.getElementById('pdf-overlay');
+  const stage = document.getElementById('pdf-stage');
+  if (!canvas || !stage) return;
+  const rect = stage.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(rect.width * dpr);
+  canvas.height = Math.round(rect.height * dpr);
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+}
+
+function pdfDrawHighlights(tempRect) {
+  const canvas = document.getElementById('pdf-overlay');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const dpr = window.devicePixelRatio || 1;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.scale(dpr, dpr);
+  const w = canvas.width / dpr;
+  const h = canvas.height / dpr;
+  // saved highlights on this page
+  ctx.fillStyle = 'rgba(250, 204, 21, 0.28)';
+  ctx.strokeStyle = 'rgba(234, 179, 8, 0.9)';
+  ctx.lineWidth = 2;
+  pdfState.highlights.filter(r => r.page === pdfState.page).forEach(r => {
+    ctx.fillRect(r.x0 * w, r.y0 * h, (r.x1 - r.x0) * w, (r.y1 - r.y0) * h);
+    ctx.strokeRect(r.x0 * w, r.y0 * h, (r.x1 - r.x0) * w, (r.y1 - r.y0) * h);
+  });
+  if (tempRect) {
+    ctx.fillStyle = 'rgba(59, 130, 246, 0.18)';
+    ctx.strokeStyle = 'rgba(59, 130, 246, 0.95)';
+    ctx.fillRect(tempRect.x0 * w, tempRect.y0 * h, (tempRect.x1 - tempRect.x0) * w, (tempRect.y1 - tempRect.y0) * h);
+    ctx.strokeRect(tempRect.x0 * w, tempRect.y0 * h, (tempRect.x1 - tempRect.x0) * w, (tempRect.y1 - tempRect.y0) * h);
+  }
+  ctx.restore();
+}
+
+function pdfClearHighlights() {
+  pdfState.highlights = pdfState.highlights.filter(r => r.page !== pdfState.page);
+  pdfDrawHighlights();
+}
+
+function pdfSaveHighlights() {
+  const lbl = document.getElementById('pdf-page-label');
+  if (!pdfState.folder || !pdfState.file) return;
+  const payload = {
+    folder: pdfState.folder,
+    file: pdfState.file,
+    highlights: pdfState.highlights
+  };
+  if (lbl) lbl.textContent = 'Saving...';
+  fetch('/pdf-apply-highlights', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  }).then(r => r.json()).then(res => {
+    if (res.status !== 'ok') throw new Error(res.error || 'Failed');
+    if (lbl) lbl.textContent = `Saved (${res.applied || 0})`;
+    // Re-render to show baked highlights
+    setTimeout(pdfRenderPage, 350);
+  }).catch(() => {
+    if (lbl) lbl.textContent = 'Save failed';
+  });
+}
+
+// Draw new highlight by drag on overlay
+let __pdfDrag = null;
+function pdfBindOverlay() {
+  const canvas = document.getElementById('pdf-overlay');
+  const stage = document.getElementById('pdf-stage');
+  if (!canvas || !stage) return;
+  const pos = (e) => {
+    const r = stage.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width;
+    const y = (e.clientY - r.top) / r.height;
+    return { x: Math.max(0, Math.min(1, x)), y: Math.max(0, Math.min(1, y)) };
+  };
+  canvas.onmousedown = (e) => {
+    e.preventDefault();
+    const p = pos(e);
+    __pdfDrag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };
+    pdfDrawHighlights(__pdfDrag);
+  };
+  canvas.onmousemove = (e) => {
+    if (!__pdfDrag) return;
+    const p = pos(e);
+    __pdfDrag.x1 = p.x;
+    __pdfDrag.y1 = p.y;
+    pdfDrawHighlights(normRect(__pdfDrag));
+  };
+  window.addEventListener('mouseup', (e) => {
+    if (!__pdfDrag) return;
+    const r = normRect(__pdfDrag);
+    __pdfDrag = null;
+    if ((r.x1 - r.x0) >= 0.01 && (r.y1 - r.y0) >= 0.01) {
+      pdfState.highlights.push({ page: pdfState.page, x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1 });
+    }
+    pdfDrawHighlights();
+  });
+}
+function normRect(r) {
+  const x0 = Math.min(r.x0, r.x1);
+  const x1 = Math.max(r.x0, r.x1);
+  const y0 = Math.min(r.y0, r.y1);
+  const y1 = Math.max(r.y0, r.y1);
+  return { x0, y0, x1, y1 };
+}
+
+window.addEventListener('resize', () => { pdfResizeOverlay(); pdfDrawHighlights(); });
+window.addEventListener('DOMContentLoaded', () => { pdfBindOverlay(); });
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
+
+function renderFolderList() {
+  const root = document.getElementById('folder-list');
+  root.innerHTML = '';
+  if (!allFolders.length) {
+    root.innerHTML = '<div class="empty">No folders found.</div>';
+    return;
+  }
+  allFolders.forEach(name => {
+    const row = document.createElement('div');
+    row.className = 'folder-item' + (selectedFolders.has(name) ? ' active' : '');
+    row.onclick = () => toggleFolder(name);
+    const left = document.createElement('div');
+    left.className = 'folder-left';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = selectedFolders.has(name);
+    cb.onclick = (e) => { e.stopPropagation(); toggleFolder(name); };
+    const label = document.createElement('div');
+    label.style.fontWeight = '900';
+    label.style.minWidth = '0';
+    label.style.overflow = 'hidden';
+    label.style.textOverflow = 'ellipsis';
+    label.style.whiteSpace = 'nowrap';
+    label.textContent = name;
+    left.appendChild(cb);
+    left.appendChild(label);
+    const right = document.createElement('div');
+    right.innerHTML = (name === '{{folder}}') ? '<span class="pill">default</span>' : '';
+    row.appendChild(left);
+    row.appendChild(right);
+    root.appendChild(row);
+  });
+}
+
+function toggleFolder(name) {
+  if (selectedFolders.has(name)) selectedFolders.delete(name);
+  else selectedFolders.add(name);
+  renderFolderList();
+  refreshExplorer();
+}
+
+function selectAll() {
+  allFolders.forEach(f => selectedFolders.add(f));
+  renderFolderList();
+  refreshExplorer();
+}
+
+function clearAll() {
+  selectedFolders.clear();
+  renderFolderList();
+  refreshExplorer();
+}
+
+function toggleLayout() {
+  layout = (layout === 'thumbs') ? 'list' : 'thumbs';
+  document.getElementById('layout-btn').textContent = (layout === 'thumbs') ? 'List' : 'Thumbnails';
+  refreshExplorer(true);
+}
+
+function getQuery() {
+  return (document.getElementById('q').value || '').trim().toLowerCase();
+}
+
+function refreshExplorer(skipFetch) {
+  const head = document.getElementById('explorer-head');
+  const body = document.getElementById('explorer-body');
+  const chosen = Array.from(selectedFolders);
+  const q = getQuery();
+
+  if (!chosen.length) {
+    head.textContent = 'No folder selected.';
+    body.innerHTML = '';
+    return;
+  }
+
+  head.textContent = 'Loading...';
+  if (skipFetch && window.__lastExplorerData) {
+    renderExplorer(window.__lastExplorerData, q);
+    return;
+  }
+
+  fetch('/folder-items?folders=' + encodeURIComponent(chosen.join(',')))
+    .then(r => r.json())
+    .then(res => {
+      if (res.status !== 'ok') throw new Error(res.error || 'Failed');
+      window.__lastExplorerData = res.folders || {};
+      renderExplorer(window.__lastExplorerData, q);
+    })
+    .catch(err => {
+      head.textContent = 'Error';
+      body.innerHTML = '<div class="empty">Failed to load folder contents.</div>';
+    });
+}
+
+function renderExplorer(data, q) {
+  const head = document.getElementById('explorer-head');
+  const body = document.getElementById('explorer-body');
+  const chosen = Array.from(selectedFolders);
+  const parts = [];
+
+  head.textContent = `Showing ${chosen.length} folder(s)`;
+  chosen.forEach(folder => {
+    const items = (data && data[folder]) ? data[folder] : [];
+    const filtered = items.filter(it => !q || ((it.name || '').toLowerCase().includes(q)));
+    const files = filtered.filter(it => !it.is_dir);
+    const dirs = filtered.filter(it => it.is_dir);
+    const total = filtered.length;
+
+    if (layout === 'thumbs') {
+      const thumbs = files
+        .filter(it => isImage(it.name))
+        .map(it => {
+          const src = `/uploads/${folder}/${it.name}`;
+          const cap = it.name;
+          return `<div class="thumb" onclick="openLightbox('${src}','${escapeHtml(folder + '\\\\' + cap)}')"><img src="${src}" alt=""><div class="cap">${escapeHtml(cap)}</div></div>`;
+        })
+        .join('');
+
+      const nonImages = files.filter(it => !isImage(it.name));
+      const listRows = nonImages.map(it => {
+        return `<div class="trow"><div class="kind">FILE</div><div class="name">${escapeHtml(it.name)}</div><div class="mono">${formatBytes(it.size)}</div><div class="mono">${formatTime(it.mtime)}</div></div>`;
+      }).join('');
+
+      parts.push(
+        `<div style="margin-bottom:14px;">
+          <div style="font-weight:900;margin:0 0 8px 0;">${escapeHtml(folder)} <span class="muted">(${total} item(s))</span></div>
+          ${dirs.length ? `<div class="explorer" style="margin-bottom:10px;">
+            <div class="thead"><div></div><div>Name</div><div>Size</div><div>Modified</div></div>
+            ${dirs.map(it => `<div class="trow"><div class="kind">DIR</div><div class="name">${escapeHtml(it.name)}</div><div class="mono">-</div><div class="mono">${formatTime(it.mtime)}</div></div>`).join('')}
+          </div>` : ``}
+          ${thumbs ? `<div class="thumbs">${thumbs}</div>` : `<div class="empty">No images in this folder.</div>`}
+          ${listRows ? `<div class="explorer" style="margin-top:10px;"><div class="thead"><div></div><div>Name</div><div>Size</div><div>Modified</div></div>${listRows}</div>` : ``}
+        </div>`
+      );
+    } else {
+      const rows = filtered.map(it => {
+        const kind = it.is_dir ? 'DIR' : (isImage(it.name) ? 'IMG' : 'FILE');
+        const size = it.is_dir ? '-' : formatBytes(it.size);
+        const nameCell = it.is_dir
+          ? escapeHtml(it.name)
+          : (isImage(it.name)
+            ? `<a href="javascript:void(0)" onclick="openLightbox('/uploads/${folder}/${it.name}','${escapeHtml(folder + '\\\\' + it.name)}')" style="color:#1d4ed8;text-decoration:none;font-weight:800;">${escapeHtml(it.name)}</a>`
+            : (isPdf(it.name)
+              ? `<a href="javascript:void(0)" onclick="openPdf('/uploads/${folder}/${it.name}','${escapeHtml(folder + '\\\\' + it.name)}')" style="color:#1d4ed8;text-decoration:none;font-weight:800;">${escapeHtml(it.name)}</a>`
+              : escapeHtml(it.name)));
+        return `<div class="trow"><div class="kind">${kind}</div><div class="name">${nameCell}</div><div class="mono">${size}</div><div class="mono">${formatTime(it.mtime)}</div></div>`;
+      }).join('');
+      parts.push(
+        `<div style="margin-bottom:14px;">
+          <div style="font-weight:900;margin:0 0 8px 0;">${escapeHtml(folder)} <span class="muted">(${total} item(s))</span></div>
+          <div class="explorer">
+            <div class="thead"><div></div><div>Name</div><div>Size</div><div>Modified</div></div>
+            ${rows || '<div class="empty">No items.</div>'}
+          </div>
+        </div>`
+      );
+    }
+  });
+
+  body.innerHTML = parts.join('') || '<div class="empty">No items.</div>';
+}
+
+function escapeHtml(s) {
+  return (s || '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('\"','&quot;').replaceAll("'",'&#39;');
+}
+
+function loadFolders() {
+  fetch('/folders')
+    .then(r => r.json())
+    .then(res => {
+      if (res.status !== 'ok') throw new Error(res.error || 'Failed');
+      allFolders = res.folders || [];
+      // default-select current folder on first load
+      if (!selectedFolders.size && res.current) selectedFolders.add(res.current);
+      renderFolderList();
+      refreshExplorer();
+    })
+    .catch(() => {
+      document.getElementById('folder-list').innerHTML = '<div class="empty">Failed to load folders.</div>';
+    });
+}
+
+function loadRecent() {
+  const head = document.getElementById('recent-head');
+  const body = document.getElementById('recent-body');
+  head.textContent = 'Loading...';
+  body.innerHTML = '';
+  fetch('/upload-log?limit=200')
+    .then(r => r.json())
+    .then(res => {
+      if (res.status !== 'ok') throw new Error(res.error || 'Failed');
+      const uploads = res.uploads || [];
+      const imgs = uploads.filter(u => isImage(u.original || u.filename || '') || isImage(u.filename || ''));
+      head.textContent = `Recent uploads: ${uploads.length} (images: ${imgs.length})`;
+      if (!uploads.length) {
+        body.innerHTML = '<div class="empty">No uploads yet.</div>';
+        return;
+      }
+      const cards = uploads.map(u => {
+        const name = u.original || u.filename || '';
+        const folder = u.folder || '';
+        const path = u.full_path || '';
+        const cap = u.captured_time ? `Captured: ${u.captured_time}${u.captured_time_source ? ` (${u.captured_time_source})` : ''}` : '';
+        const loc = (u.exif_lat != null && u.exif_lon != null) ? `GPS: ${Number(u.exif_lat).toFixed(6)}, ${Number(u.exif_lon).toFixed(6)}` : '';
+        const reso = u.exif_resolution ? `Res: ${u.exif_resolution}` : '';
+        const meta = [cap, loc, reso].filter(Boolean).join(' | ');
+        const isImg = isImage(name) || isImage(u.filename || '');
+        const src = isImg ? `/uploads/${folder}/${u.filename}` : '';
+        return `<div class="panel" style="margin-bottom:10px;">
+          <div style="font-weight:900;">${escapeHtml(name)}</div>
+          <div class="muted">${escapeHtml(meta || '')}</div>
+          <div class="mono" style="margin-top:6px;">${escapeHtml(path)}</div>
+          ${isImg ? `<div style="margin-top:10px;"><div class="thumb" onclick="openLightbox('${src}','${escapeHtml(folder + '\\\\' + (u.filename||''))}')"><img src="${src}" alt=""><div class="cap">${escapeHtml(folder + '\\\\' + (u.filename||''))}</div></div></div>` : ''}
+        </div>`;
+      }).join('');
+      body.innerHTML = cards;
+    })
+    .catch(() => {
+      head.textContent = 'Error';
+      body.innerHTML = '<div class="empty">Failed to load recent uploads.</div>';
+    });
+}
+
+document.getElementById('q').addEventListener('input', () => refreshExplorer(true));
+
+window.addEventListener('DOMContentLoaded', () => {
+  loadFolders();
+});
+</script>
+</body>
+</html>
