@@ -443,7 +443,7 @@ summary::-webkit-details-marker { display: none; }
     </div>
   </div>
     <div class="bar-actions">
-        <span style="font-size:0.97rem;color:#64748b;margin-right:8px;user-select:none;">v{{version}}</span>
+        <span id="app-version" style="font-size:0.97rem;color:#64748b;margin-right:8px;user-select:none;">v{{version}}</span>
      <select id="folder-select" aria-label="Folder"></select>
      <button class="btn-ghost" onclick="useSelectedFolder()">Use</button>
     <a href="/gallery" class="btn" style="margin-left:4px;">Gallery</a>
@@ -629,17 +629,19 @@ function restartServer() {
 
 <script>
 function showUpdateModal() {
+    if (!confirm('Are you sure you want to check for and apply updates?')) return;
     const modal = document.getElementById('update-modal');
     const status = document.getElementById('update-modal-status');
     const version = document.getElementById('update-modal-version');
-    version.innerText = 'Current version: v' + (window.appVersion || '{{version}}');
+    // Read version from the visible appbar
+    const appVersion = document.getElementById('app-version')?.innerText || 'v?';
+    version.innerText = 'Current version: ' + appVersion;
     modal.style.display = 'flex';
     status.innerText = 'Checking for updates...';
     fetch('/update-app', {method: 'POST'})
         .then(r => r.json())
         .then(res => {
             status.innerText = (res.status === 'ok' ? 'Update complete!\n' : 'Update failed: ') + (res.output || res.error || '');
-            // Optionally update version if backend returns it in the future
         })
         .catch(() => {
             status.innerText = 'Update failed (network error)';
