@@ -1,32 +1,22 @@
-# Restart server endpoint
-@app.post("/restart-server")
-def restart_server():
-    if not security_ok():
-        return jsonify({"status": "unauthorized"}), 401
-    try:
-        # On Windows, use a subprocess to restart the script
-        python = os.sys.executable
-        script = os.path.abspath(__file__)
-        # Start a new process and exit the current one
-        subprocess.Popen([python, script])
-        os._exit(0)
-        return jsonify({"status": "ok"})
-    except Exception as e:
-        return jsonify({"status": "error", "error": str(e)})
+
+
+
+from flask import Flask, jsonify, redirect, request, send_from_directory, session
 import base64
 import datetime
 import io
 import ipaddress
 import os
+import random
 import socket
 import subprocess
 import threading
 import uuid
 import webbrowser
-
-from flask import Flask, jsonify, redirect, request, send_from_directory, session
-
 from db import get_db_path, init_db, insert_upload
+
+APP_VERSION = "2"
+PORT = 5000
 
 
 print("===================")
@@ -34,19 +24,49 @@ print("Current time:", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 print("(Press Enter to use default values shown in brackets)")
 print("===================\n")
 
+
+
+# --- Ephemeral SECRET_TOKEN logic (expires on server stop) ---
+user_token = input("QR token (Enter = auto): ").strip()
+SECRET_TOKEN = user_token or uuid.uuid4().hex[:10]
+
 PASSWORD = input("Set admin password [binod]: ").strip() or "binod"
-SECRET_TOKEN = input("QR token (Enter = auto): ").strip() or uuid.uuid4().hex[:10]
 
 DEFAULT_PATH = r"D:\Software\TTp"
 DEFAULT_FOLDER = "uploads"
 UPLOAD_PATH = input(f"Set upload base path [{DEFAULT_PATH}]: ").strip() or DEFAULT_PATH
 UPLOAD_FOLDER = input(f"Set upload folder name [{DEFAULT_FOLDER}]: ").strip() or DEFAULT_FOLDER
 
-PORT = 5000
-
 CURRENT_FOLDER = os.path.join(UPLOAD_PATH, UPLOAD_FOLDER)
 os.makedirs(CURRENT_FOLDER, exist_ok=True)
 ADMIN_FOLDER = UPLOAD_FOLDER
+
+
+
+# Flask app must be initialized before any route decorators
+app = Flask(__name__)
+app.secret_key = "secure-session"
+init_db(UPLOAD_PATH)
+
+
+def generate_wifi_qr(ssid, password, auth):
+    # WiFi QR format: WIFI:T:WPA;S:mynetwork;P:mypass;H:false;;
+    import qrcode
+    qr_str = f"WIFI:T:{auth};S:{ssid};P:{password};;"
+    img = qrcode.make(qr_str)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+
+
+
+# Simple test endpoint to verify server instance
+@app.get("/test-alive")
+def test_alive():
+    return "Server is running", 200
+
 
 app = Flask(__name__)
 app.secret_key = "secure-session"
@@ -112,6 +132,24 @@ def generate_qr(url):
     img.save(buf, format="PNG")
     return base64.b64encode(buf.getvalue()).decode()
 
+
+
+# Start/stop Windows WiFi hotspot and return SSID/password
+@app.post("/start-hotspot")
+def start_hotspot():
+    if not security_ok():
+        return jsonify({"status": "unauthorized"}), 401
+    ssid = f"Uploader_{random.randint(1000,9999)}"
+    password = uuid.uuid4().hex[:12]
+    try:
+        subprocess.run(["netsh", "wlan", "set", "hostednetwork", f"mode=allow", f"ssid={ssid}", f"key={password}"], capture_output=True, text=True, timeout=10)
+        result = subprocess.run(["netsh", "wlan", "start", "hostednetwork"], capture_output=True, text=True, timeout=10)
+        if "started" in result.stdout.lower():
+            return jsonify({"status": "ok", "ssid": ssid, "password": password, "auth": "WPA2"})
+        else:
+            return jsonify({"status": "error", "error": result.stdout + result.stderr})
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)})
 
 # Serve uploaded files for gallery
 @app.route("/uploads/<folder>/<filename>")
@@ -426,9 +464,44 @@ def home():
     ip = get_ip()
     url = f"http://{ip}:{PORT}/login?token={SECRET_TOKEN}"
     qr = generate_qr(url)
+
+    # Get WiFi info (Windows only)
+    wifi_ssid = wifi_pass = wifi_auth = None
+    try:
+        import subprocess
+        result = subprocess.run(["netsh", "wlan", "show", "interfaces"], capture_output=True, text=True, timeout=3)
+        lines = result.stdout.splitlines()
+        for line in lines:
+            if "SSID" in line and ":" in line and not wifi_ssid:
+                wifi_ssid = line.split(":",1)[1].strip().strip('"')
+        # Find all authentications, prefer WPA3 > WPA2 > WPA
+        auths = [line.split(":",1)[1].strip().upper() for line in lines if "Authentication" in line and ":" in line]
+        wifi_auth = None
+        for preferred in ["WPA3-PERSONAL", "WPA2-PERSONAL", "WPA-PERSONAL"]:
+            for a in auths:
+                if preferred in a:
+                    wifi_auth = preferred.replace("-PERSONAL", "")
+                    break
+            if wifi_auth:
+                break
+        if not wifi_auth and auths:
+            wifi_auth = auths[0].split("-")[0]  # fallback to first
+        if wifi_ssid:
+            result2 = subprocess.run(["netsh", "wlan", "show", "profile", f"name={wifi_ssid}", "key=clear"], capture_output=True, text=True, timeout=3)
+            for line in result2.stdout.splitlines():
+                if "Key Content" in line:
+                    wifi_pass = line.split(":",1)[1].strip()
+                    break
+    except Exception:
+        pass
+    wifi_qr = ""
+    if wifi_ssid and wifi_pass and wifi_auth:
+        wifi_qr = generate_wifi_qr(wifi_ssid, wifi_pass, wifi_auth)
+
     with open("upload.html", "r", encoding="utf-8") as f:
         html = f.read()
-    html = html.replace("{{qr}}", qr).replace("{{folder}}", ADMIN_FOLDER)
+    html = html.replace("{{qr}}", qr).replace("{{folder}}", ADMIN_FOLDER).replace("{{version}}", APP_VERSION)
+    html = html.replace("{{wifi_qr}}", wifi_qr).replace("{{wifi_ssid}}", wifi_ssid or "").replace("{{wifi_pass}}", wifi_pass or "").replace("{{wifi_auth}}", wifi_auth or "")
     return html
 
 
@@ -438,7 +511,7 @@ def gallery():
         return redirect(f"/login?token={SECRET_TOKEN}")
     with open("gallery.html", "r", encoding="utf-8") as f:
         html = f.read()
-    html = html.replace("{{folder}}", ADMIN_FOLDER)
+    html = html.replace("{{folder}}", ADMIN_FOLDER).replace("{{version}}", APP_VERSION)
     return html
 
 
@@ -697,6 +770,7 @@ def upload_log_api():
 if __name__ == "__main__":
     ip = get_ip()
     url = f"http://{ip}:{PORT}/login?token={SECRET_TOKEN}"
+    home_url = f"http://{ip}:{PORT}/"
 
     print("\n========================")
     print("SERVER READY")
@@ -704,5 +778,6 @@ if __name__ == "__main__":
     print("PHONE:", url)
     print("========================\n")
 
-    threading.Timer(1.5, lambda: webbrowser.open(url)).start()
-    app.run(host="0.0.0.0", port=PORT)
+    # Open the home page (/) instead of the login QR URL
+    threading.Timer(1.5, lambda: webbrowser.open(home_url)).start()
+    app.run(host="0.0.0.0", port=PORT, use_reloader=False)

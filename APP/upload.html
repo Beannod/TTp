@@ -442,36 +442,125 @@ summary::-webkit-details-marker { display: none; }
       <div class="sub">Folder: <span id="folder-label">{{folder}}</span></div>
     </div>
   </div>
-  <div class="bar-actions">
+    <div class="bar-actions">
+        <span style="font-size:0.97rem;color:#64748b;margin-right:8px;user-select:none;">v{{version}}</span>
      <select id="folder-select" aria-label="Folder"></select>
      <button class="btn-ghost" onclick="useSelectedFolder()">Use</button>
     <a href="/gallery" class="btn" style="margin-left:4px;">Gallery</a>
-    <button class="btn-warn" onclick="updateApp()">Update</button>
+    <button class="btn-warn" onclick="showUpdateModal()">Update</button>
     <button class="btn-warn" onclick="restartServer()">Restart Server</button>
 <script>
 function restartServer() {
     if (!confirm('Are you sure you want to restart the server?')) return;
-    document.getElementById('update-status').innerText = 'Restarting server...';
+    const statusEl = document.getElementById('update-status');
+    statusEl.innerText = 'Restarting server... Please wait.';
     fetch('/restart-server', {method: 'POST'})
         .then(r => r.json())
         .then(res => {
-            document.getElementById('update-status').innerText = res.status === 'ok' ? 'Server restarting...' : 'Restart failed: ' + (res.error || '');
+            if (res.status === 'ok') {
+                statusEl.innerText = 'Server restarting... This page will reload automatically in 5 seconds.';
+                setTimeout(() => { window.location.reload(); }, 5000);
+            } else {
+                statusEl.innerText = 'Restart failed: ' + (res.error || '');
+            }
         })
         .catch(() => {
-            document.getElementById('update-status').innerText = 'Restart failed (network error)';
+            statusEl.innerText = 'Restarting... The server may be restarting. This page will reload in 5 seconds.';
+            setTimeout(() => { window.location.reload(); }, 5000);
         });
 }
 </script>
   </div>
 </div>
 <div class="card">
-  <div class="qr-row">
-    <div class="mini">
-      <div style="font-weight:700;color:#111827;">Session</div>
-      <div style="color:#6b7280;font-size:0.9em;">LAN only</div>
-      <div id="stats-line">Loading stats...</div>
+    <div class="qr-row">
+        <div class="mini">
+            <div style="font-weight:700;color:#111827;">Session</div>
+            <div style="color:#6b7280;font-size:0.9em;">LAN only</div>
+            <div id="stats-line">Loading stats...</div>
+        </div>
+        <img class="qr" src="data:image/png;base64,{{qr}}" alt="QR">
+        <div id="mini-wifi-qr-inline" style="display:none;margin-left:10px;align-self:center;">
+            <img id="mini-wifi-qr-img-inline" src="" alt="Mini WiFi QR" style="width:64px;height:64px;border-radius:8px;box-shadow:0 1px 4px #a5b4fc55;">
+            <div style="font-size:0.8em;color:#64748b;margin-top:2px;text-align:center;">WiFi</div>
+        </div>
     </div>
-    <img class="qr" src="data:image/png;base64,{{qr}}" alt="QR">
+
+        <div style="margin-top:10px;">
+            <button id="hotspot-btn" class="btn-warn" style="width:100%;margin-bottom:8px;">Start Hotspot & Show QR</button>
+        </div>
+        <div id="wifi-qr-block" class="mini" style="margin-top:10px;display:none;">
+            <div style="font-weight:700;color:#111827;">WiFi QR</div>
+            <div style="color:#6b7280;font-size:0.9em;">SSID: <b id="wifi-ssid"></b></div>
+            <div style="color:#6b7280;font-size:0.9em;">Password: <b id="wifi-pass"></b></div>
+            <div style="color:#6b7280;font-size:0.9em;">Auth: <b id="wifi-auth"></b></div>
+            <img id="wifi-qr-img" class="qr" src="" alt="WiFi QR" style="margin-top:6px;width:128px;height:128px;">
+        </div>
+        <div id="wifi-qr-missing" class="mini" style="margin-top:10px;display:none;color:#f59e42;">
+                <span>WiFi QR not available.<br>Connect to WiFi and reload this page.</span>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+        <script>
+        // Show WiFi QR only if present, else show a message
+        (function() {
+            var qr = "{{wifi_qr}}";
+            var ssid = "{{wifi_ssid}}";
+            var pass = "{{wifi_pass}}";
+            var auth = "{{wifi_auth}}";
+            if (qr && ssid && pass && auth) {
+                // Show only the mini QR inline, hide the large WiFi QR block
+                document.getElementById('wifi-qr-block').style.display = 'none';
+                document.getElementById('mini-wifi-qr-img-inline').src = 'data:image/png;base64,' + qr;
+                document.getElementById('mini-wifi-qr-inline').style.display = '';
+            } else {
+                document.getElementById('wifi-qr-missing').style.display = '';
+            }
+        })();
+
+        // Hotspot button logic
+        document.getElementById('hotspot-btn').onclick = async function() {
+            this.disabled = true;
+            this.textContent = 'Starting Hotspot...';
+            try {
+                const res = await fetch('/start-hotspot', {method: 'POST'});
+                let data = null;
+                try {
+                    data = await res.json();
+                } catch (e) {
+                    alert('Hotspot error: Invalid server response. Are you logged in?');
+                    this.textContent = 'Start Hotspot & Show QR';
+                    this.disabled = false;
+                    return;
+                }
+                if (data.status === 'ok') {
+                    // Generate QR code for WiFi
+                    const qrStr = `WIFI:T:WPA;S:${data.ssid};P:${data.password};;`;
+                    document.getElementById('wifi-qr-block').style.display = '';
+                    document.getElementById('wifi-ssid').textContent = data.ssid;
+                    document.getElementById('wifi-pass').textContent = data.password;
+                    document.getElementById('wifi-auth').textContent = data.auth;
+                    QRCode.toDataURL(qrStr, {width:128}, function (err, url) {
+                        document.getElementById('wifi-qr-img').src = url;
+                    });
+                    QRCode.toDataURL(qrStr, {width:64}, function (err, url) {
+                        document.getElementById('mini-wifi-qr-img-inline').src = url;
+                        document.getElementById('mini-wifi-qr-inline').style.display = '';
+                    });
+                    this.textContent = 'Hotspot Started';
+                } else if (data.status === 'unauthorized') {
+                    alert('You must be logged in and on the same network to start the hotspot.');
+                    window.location.href = '/login';
+                } else {
+                    alert('Hotspot error: ' + (data.error || 'Unknown error'));
+                    this.textContent = 'Start Hotspot & Show QR';
+                }
+            } catch (e) {
+                alert('Hotspot error: ' + e);
+                this.textContent = 'Start Hotspot & Show QR';
+            }
+            this.disabled = false;
+        };
+        </script>
   </div>
 
   <div class="split">
@@ -503,7 +592,16 @@ function restartServer() {
       <div id="file-hint" style="margin-top:6px;color:#64748b;font-size:0.9rem;"></div>
   </div>
 
-  <div id="update-status" style="margin:8px 0 0 0;font-size:0.93rem;color:#f59e42;text-align:left;"></div>
+
+    <!-- Update Modal -->
+    <div id="update-modal" style="display:none;position:fixed;z-index:3000;left:0;top:0;width:100vw;height:100vh;background:rgba(30,41,59,0.38);align-items:center;justify-content:center;">
+        <div style="background:#fff;padding:28px 22px 18px 22px;border-radius:16px;box-shadow:0 8px 32px #6366f155;max-width:340px;width:90vw;position:relative;">
+            <div style="font-size:1.18rem;font-weight:700;color:#6366f1;margin-bottom:8px;">Update Info</div>
+            <div id="update-modal-version" style="font-size:0.97rem;color:#6366f1;margin-bottom:8px;">Current version: v{{version}}</div>
+            <div id="update-modal-status" style="font-size:0.98rem;color:#475569;min-height:38px;margin-bottom:12px;">Checking for updates...</div>
+            <button onclick="closeUpdateModal()" style="position:absolute;top:8px;right:12px;background:none;border:none;font-size:1.3rem;color:#64748b;cursor:pointer;">&times;</button>
+        </div>
+    </div>
 
   <div class="progress">
     <div class="bar" id="bar"></div>
@@ -512,13 +610,7 @@ function restartServer() {
   <div id="summary"></div>
   <ul id="log"></ul>
 
-  <details>
-    <summary>Gallery</summary>
-    <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
-      <div style="color:#64748b;font-size:0.92rem;">Browse images in a separate page.</div>
-      <a href="/gallery" class="btn" style="padding:10px 12px;border-radius:12px;">Open Gallery</a>
-    </div>
-  </details>
+
 
   <details>
     <summary>Upload Log</summary>
@@ -536,16 +628,25 @@ function restartServer() {
 </div>
 
 <script>
-function updateApp() {
-    document.getElementById('update-status').innerText = 'Checking for updates...';
+function showUpdateModal() {
+    const modal = document.getElementById('update-modal');
+    const status = document.getElementById('update-modal-status');
+    const version = document.getElementById('update-modal-version');
+    version.innerText = 'Current version: v' + (window.appVersion || '{{version}}');
+    modal.style.display = 'flex';
+    status.innerText = 'Checking for updates...';
     fetch('/update-app', {method: 'POST'})
         .then(r => r.json())
         .then(res => {
-            document.getElementById('update-status').innerText = res.status === 'ok' ? 'Update complete! ' + (res.output || '') : 'Update failed: ' + (res.error || '');
+            status.innerText = (res.status === 'ok' ? 'Update complete!\n' : 'Update failed: ') + (res.output || res.error || '');
+            // Optionally update version if backend returns it in the future
         })
         .catch(() => {
-            document.getElementById('update-status').innerText = 'Update failed (network error)';
+            status.innerText = 'Update failed (network error)';
         });
+}
+function closeUpdateModal() {
+    document.getElementById('update-modal').style.display = 'none';
 }
 function showUploads() {
         let folder = currentFolder;
