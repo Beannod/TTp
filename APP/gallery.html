@@ -201,6 +201,9 @@ input[type="text"] {
   box-shadow: 0 18px 60px rgba(0,0,0,0.35);
   background: #fff;
 }
+.pdf-overlay {
+  touch-action: none;
+}
 .lightbox .cap {
   margin-top: 10px;
   max-width: min(94vw, 980px);
@@ -324,7 +327,7 @@ input[type="text"] {
       </div>
       <div id="pdf-stage" style="position:relative;width:min(94vw,980px);height:84vh;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 18px 60px rgba(0,0,0,0.35);">
         <img id="pdf-page-img" alt="PDF Page" style="width:100%;height:100%;object-fit:contain;display:block;">
-        <canvas id="pdf-overlay" style="position:absolute;inset:0;"></canvas>
+        <canvas id="pdf-overlay" class="pdf-overlay" style="position:absolute;inset:0;"></canvas>
       </div>
     </div>
     <a id="lightbox-open" class="open" href="#" target="_blank" rel="noopener" style="display:none;">Open</a>
@@ -555,28 +558,38 @@ function pdfBindOverlay() {
     const y = (e.clientY - r.top) / r.height;
     return { x: Math.max(0, Math.min(1, x)), y: Math.max(0, Math.min(1, y)) };
   };
-  canvas.onmousedown = (e) => {
+
+  const onDown = (e) => {
     e.preventDefault();
+    canvas.setPointerCapture(e.pointerId);
     const p = pos(e);
-    __pdfDrag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };
+    __pdfDrag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y, pid: e.pointerId };
     pdfDrawHighlights(__pdfDrag);
   };
-  canvas.onmousemove = (e) => {
-    if (!__pdfDrag) return;
+  const onMove = (e) => {
+    if (!__pdfDrag || __pdfDrag.pid !== e.pointerId) return;
+    e.preventDefault();
     const p = pos(e);
     __pdfDrag.x1 = p.x;
     __pdfDrag.y1 = p.y;
     pdfDrawHighlights(normRect(__pdfDrag));
   };
-  window.addEventListener('mouseup', (e) => {
-    if (!__pdfDrag) return;
+  const onUp = (e) => {
+    if (!__pdfDrag || __pdfDrag.pid !== e.pointerId) return;
+    e.preventDefault();
+    try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
     const r = normRect(__pdfDrag);
     __pdfDrag = null;
     if ((r.x1 - r.x0) >= 0.01 && (r.y1 - r.y0) >= 0.01) {
       pdfState.highlights.push({ page: pdfState.page, x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1 });
     }
     pdfDrawHighlights();
-  });
+  };
+
+  canvas.addEventListener('pointerdown', onDown);
+  canvas.addEventListener('pointermove', onMove);
+  canvas.addEventListener('pointerup', onUp);
+  canvas.addEventListener('pointercancel', onUp);
 }
 function normRect(r) {
   const x0 = Math.min(r.x0, r.x1);
