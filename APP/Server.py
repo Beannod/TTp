@@ -163,16 +163,22 @@ def update_app():
     if not security_ok():
         return jsonify({"status": "unauthorized"}), 401
     try:
-        result = subprocess.run(
+        # Auto-commit any local changes before pulling
+        subprocess.run(["git", "add", "."], cwd=os.path.dirname(__file__), capture_output=True, text=True, timeout=10)
+        commit_result = subprocess.run([
+            "git", "commit", "-m", "Auto-commit before update"
+        ], cwd=os.path.dirname(__file__), capture_output=True, text=True, timeout=10)
+        # Ignore 'nothing to commit' error
+        pull_result = subprocess.run(
             ["git", "pull"],
             cwd=os.path.dirname(__file__),
             capture_output=True,
             text=True,
             timeout=30,
         )
-        if result.returncode == 0:
-            return jsonify({"status": "ok", "output": result.stdout.strip()})
-        return jsonify({"status": "error", "error": result.stderr.strip()})
+        if pull_result.returncode == 0:
+            return jsonify({"status": "ok", "output": pull_result.stdout.strip()})
+        return jsonify({"status": "error", "error": pull_result.stderr.strip()})
     except Exception as e:
         return jsonify({"status": "error", "error": str(e)})
 
